@@ -1,5 +1,6 @@
 # Uncomment this to pass the first stage
 import socket
+import threading
 
 
 def main():
@@ -9,7 +10,14 @@ def main():
     # Uncomment this to pass the first stage
     #
     server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
-    connection, addr = server_socket.accept()  # wait for client connection
+    while True:
+        print("Waiting for connection")
+        connection, addr = server_socket.accept()  # wait for client connection
+        print("Connection from", addr)
+        thread = threading.Thread(target=handle_client, args=(connection,))
+        thread.start()
+
+def handle_client(connection):
     chunks = []
     bytes_recd = 0
     with connection:
@@ -24,5 +32,6 @@ def main():
             # Echo back the received data
             #connection.sendall(data)
             connection.send(b"+PONG\r\n")
+
 if __name__ == "__main__":
     main()
