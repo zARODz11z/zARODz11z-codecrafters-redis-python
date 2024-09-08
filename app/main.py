@@ -2,6 +2,8 @@
 import socket
 import asyncio
 
+redis_dict = {} # Dictionary to store key-value pairs
+
 async def handle_client(reader, writer):
     """
     Asynchronously handle communincation with a single client.
@@ -35,6 +37,23 @@ async def handle_client(reader, writer):
                     writer.write(resp) # Respond with the echo argument
                 else:
                     writer.write(b"-ERR wrong number of arguments for 'ECHO' command\r\n")
+            elif cmd_name == "SET":
+                print("Received SET command")
+                if len(command) == 3:
+                    key = command[1]
+                    value = command[2]
+                    redis_dict[key] = value
+                    writer.write(b"+OK\r\n") # Respond with OK
+            elif cmd_name == "GET":
+                print("Received GET command")
+                if len(command) == 2:
+                    key = command[1]
+                    if key in redis_dict:
+                        value = redis_dict[key]
+                        resp = f"${len(value)}\r\n{value}\r\n".encode('utf-8')
+                        writer.write(resp) # Respond with the value 
+                    else:
+                        writer.write(b"$-1\r\n") # Respond with nil
             else:
                 writer.write(b"-ERR unknown command\r\n")
             
@@ -62,7 +81,6 @@ def parse_redis_command(data):
             for _ in range(num_elements):
                 # Each argument starts with $ followed by the length of the argument
                 if parts[idx][0:1] == b'$':
-                    arg_len = int(parts[idx][1:])
                     idx += 1
                     arg = parts[idx].decode('utf-8')
                     result.append(arg)
