@@ -1,6 +1,8 @@
 # Uncomment this to pass the first stage
+import sys
 import socket
 import asyncio
+import time
 
 redis_dict = {} # Dictionary to store key-value pairs
 
@@ -39,17 +41,27 @@ async def handle_client(reader, writer):
                     writer.write(b"-ERR wrong number of arguments for 'ECHO' command\r\n")
             elif cmd_name == "SET":
                 print("Received SET command")
-                if len(command) == 3:
+                if len(command) >= 3:
                     key = command[1]
                     value = command[2]
-                    redis_dict[key] = value
+                    expiry_milliseconds_arg = command[-1] if len(command) >= 4 else None
+                    print("expiry_arg: {}",expiry_milliseconds_arg)
+                    time_since_epoch = int(time.time() * 1000) # Get the current time in milliseconds
+                    expiry_time = time_since_epoch + int(expiry_milliseconds_arg) if expiry_milliseconds_arg else sys.maxsize
+                    print("expiry_time: {}", expiry_time)
+                    print("time_since_epoch: {}", time_since_epoch)
+                    if expiry_time:
+                        redis_dict[key] = (value, expiry_time)                    
+                    
                     writer.write(b"+OK\r\n") # Respond with OK
             elif cmd_name == "GET":
                 print("Received GET command")
                 if len(command) == 2:
                     key = command[1]
-                    if key in redis_dict:
-                        value = redis_dict[key]
+                    time_since_epoch = int(time.time() * 1000) # Get the current time in milliseconds
+                    expiry_time = redis_dict[key][1]
+                    if key in redis_dict and expiry_time > time_since_epoch:
+                        value = redis_dict[key][0]
                         resp = f"${len(value)}\r\n{value}\r\n".encode('utf-8')
                         writer.write(resp) # Respond with the value 
                     else:
