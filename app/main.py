@@ -3,6 +3,7 @@ import sys
 import socket
 import asyncio
 import time
+import argparse
 
 redis_dict = {} # Dictionary to store key-value pairs
 
@@ -109,8 +110,12 @@ async def main():
     """
     print("Server starting...")
 
+    argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument('--port', type=int, default=6379, help='Port to listen on')
+    args = argument_parser.parse_args()
+    port = args.port
     # Create the server, bind it to localhost:6379, and start accepting connections
-    server = await asyncio.start_server(handle_client, 'localhost', 6379)
+    server = await asyncio.start_server(handle_client, 'localhost', port)
 
     # Display server details
     addr = server.sockets[0].getsockname()
